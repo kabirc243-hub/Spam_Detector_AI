@@ -1,14 +1,21 @@
-import pandas as pd
+import re
 import pickle
+import pandas as pd
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-# from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import classification_report
 
-# Load dataset
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix
+)
+
+# =========================
+# LOAD DATASET
+# =========================
+
 df = pd.read_csv(
     "SMSSpamCollection",
     sep='\t',
@@ -16,59 +23,114 @@ df = pd.read_csv(
     names=['label', 'message']
 )
 
-# Keep only useful columns
-df = df[['label', 'message']]
+# =========================
+# CLEAN DATA
+# =========================
 
-# Rename columns
-df.columns = ['label', 'message']
+def clean_text(text):
 
-# Convert labels to numbers
+    # Convert to lowercase
+    text = text.lower()
+
+    # Remove URLs
+    text = re.sub(r'http\S+|www\S+', '', text)
+
+    # Remove email addresses
+    text = re.sub(r'\S+@\S+', '', text)
+
+    # Remove numbers
+    text = re.sub(r'\d+', '', text)
+
+    # Remove punctuation/special characters
+    text = re.sub(r'[^\w\s]', '', text)
+
+    # Remove extra spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+# Apply cleaning
+df['message'] = df['message'].apply(clean_text)
+
+# =========================
+# LABEL ENCODING
+# =========================
+
 df['label'] = df['label'].map({
     'ham': 0,
     'spam': 1
 })
 
-# Features and labels
+# =========================
+# FEATURES & LABELS
+# =========================
+
 X = df['message']
 y = df['label']
 
-# Split data
+# =========================
+# TRAIN TEST SPLIT
+# =========================
+
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
     test_size=0.2,
-    random_state=42
+    random_state=42,
+    stratify=y
 )
 
-# Convert text into vectors
+# =========================
+# TF-IDF VECTORIZATION
+# =========================
+
 vectorizer = TfidfVectorizer(
-    # stop_words='english',
     lowercase=True,
-    ngram_range=(1,2)
+    stop_words='english',
+    ngram_range=(1, 3),
+    max_features=15000,
+    min_df=2,
+    max_df=0.95,
+    sublinear_tf=True
 )
 
 X_train_vec = vectorizer.fit_transform(X_train)
 X_test_vec = vectorizer.transform(X_test)
 
-# Train model
-# model = MultinomialNB()
-model = LogisticRegression()
+# =========================
+# TRAIN MODEL
+# =========================
+
+model = LogisticRegression(
+    max_iter=2000,
+    class_weight='balanced'
+)
 
 model.fit(X_train_vec, y_train)
 
-# Test accuracy
-y_pred = model.predict(X_test_vec)
+# =========================
+# EVALUATION
+# =========================
 
+y_pred = model.predict(X_test_vec)
 
 accuracy = accuracy_score(y_test, y_pred)
 
+print("\n=========================")
 print(f"Accuracy: {accuracy * 100:.2f}%")
+print("=========================\n")
+
+print("Classification Report:\n")
 print(classification_report(y_test, y_pred))
 
-# Save model
-pickle.dump(model, open("model.pkl", "wb"))
+print("\nConfusion Matrix:\n")
+print(confusion_matrix(y_test, y_pred))
 
-# Save vectorizer
+# =========================
+# SAVE MODEL
+# =========================
+
+pickle.dump(model, open("model.pkl", "wb"))
 pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
 
-print("Model and vectorizer saved successfully.")
+print("\nModel and vectorizer saved successfully.")
