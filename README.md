@@ -1,0 +1,1 @@
+This is a AI model which is trained to detect whether the inserted message is spam or not. It takes the message as input and as output tells you whether it is a spam or not and gives confidence score for it.
