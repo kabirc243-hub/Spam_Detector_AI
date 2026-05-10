@@ -12,9 +12,7 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-# =========================
-# LOAD DATASET
-# =========================
+
 
 df = pd.read_csv(
     "SMSSpamCollection",
@@ -23,54 +21,41 @@ df = pd.read_csv(
     names=['label', 'message']
 )
 
-# =========================
-# CLEAN DATA
-# =========================
+
 
 def clean_text(text):
 
-    # Convert to lowercase
+  
     text = text.lower()
+    text = re.sub(r'http\S+|www\S+', ' URL ', text)
 
-    # Remove URLs
-    text = re.sub(r'http\S+|www\S+', '', text)
-
-    # Remove email addresses
     text = re.sub(r'\S+@\S+', '', text)
-
-    # Remove numbers
     text = re.sub(r'\d+', '', text)
 
-    # Remove punctuation/special characters
+
     text = re.sub(r'[^\w\s]', '', text)
 
-    # Remove extra spaces
+
     text = re.sub(r'\s+', ' ', text).strip()
 
     return text
 
-# Apply cleaning
+
 df['message'] = df['message'].apply(clean_text)
 
-# =========================
-# LABEL ENCODING
-# =========================
+
 
 df['label'] = df['label'].map({
     'ham': 0,
     'spam': 1
 })
 
-# =========================
-# FEATURES & LABELS
-# =========================
+
 
 X = df['message']
 y = df['label']
 
-# =========================
-# TRAIN TEST SPLIT
-# =========================
+
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
@@ -80,9 +65,7 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
-# =========================
-# TF-IDF VECTORIZATION
-# =========================
+
 
 vectorizer = TfidfVectorizer(
     lowercase=True,
@@ -97,9 +80,6 @@ vectorizer = TfidfVectorizer(
 X_train_vec = vectorizer.fit_transform(X_train)
 X_test_vec = vectorizer.transform(X_test)
 
-# =========================
-# TRAIN MODEL
-# =========================
 
 model = LogisticRegression(
     max_iter=2000,
@@ -108,9 +88,7 @@ model = LogisticRegression(
 
 model.fit(X_train_vec, y_train)
 
-# =========================
-# EVALUATION
-# =========================
+
 
 y_pred = model.predict(X_test_vec)
 
@@ -126,9 +104,7 @@ print(classification_report(y_test, y_pred))
 print("\nConfusion Matrix:\n")
 print(confusion_matrix(y_test, y_pred))
 
-# =========================
-# SAVE MODEL
-# =========================
+
 
 pickle.dump(model, open("model.pkl", "wb"))
 pickle.dump(vectorizer, open("vectorizer.pkl", "wb"))
